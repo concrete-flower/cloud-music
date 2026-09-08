@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "music-cloud",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-08",
+	"observability": {
+		"enabled": true
+	},
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "music-cloud"
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "music-cloud",
+			"database_id": "43a48769-0367-4835-8f2d-b01cef7b3d7a"
+		}
+	],
+	"routes": [
+		{
+			"pattern": "music.casablanque.com",
+			"custom_domain": true
+		}
+	]
+}
