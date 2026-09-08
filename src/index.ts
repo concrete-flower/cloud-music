@@ -67,6 +67,9 @@ const requireAuth = async (c: any, next: any) => {
   ).bind(sessionId).first();
 
   if (!session || (session.expires_at as number) < Math.floor(Date.now() / 1000)) {
+    if (session) {
+      await c.env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(session.id).run();
+    }
     deleteCookie(c, 'music_session');
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -429,6 +432,10 @@ app.post('/api/users', requireAuth, requireAdmin, async (c) => {
   const existing = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?').bind(username).first();
   if (existing) return c.json({ error: 'Пользователь уже существует' }, 400);
 
+  if (role && role !== 'admin' && role !== 'user') {
+    return c.json({ error: 'Недопустимая роль' }, 400);
+  }
+
   const fullHash = await hashPassword(password);
   const userId = 'usr_' + crypto.randomUUID().slice(0, 8);
   const now = Math.floor(Date.now() / 1000);
@@ -482,31 +489,54 @@ app.get('/api/tracks/:id/stream', requireAuth, async (c) => {
 
     const rangeHeader = c.req.header('Range');
 
+    const commonHeaders = {
+      'Accept-Ranges': 'bytes',
+      'Content-Type': track.mime_type || 'audio/mpeg',
+      'Cache-Control': 'private, no-store',
+    };
+
     if (!rangeHeader) {
       const object = await c.env.R2_BUCKET.get(track.r2_key);
       if (!object) return c.text('File missing in R2', 404);
 
-      const headers = new Headers();
+      const headers = new Headers(commonHeaders);
       object.writeHttpMetadata(headers);
-      headers.set('Accept-Ranges', 'bytes');
-      headers.set('Content-Type', track.mime_type || 'audio/mpeg');
       headers.set('Content-Length', track.file_size.toString());
 
       return new Response(object.body, { headers });
     }
 
-    const match = rangeHeader.match(/bytes=(\d+)-(\d+)?/);
-    if (!match) return c.text('Invalid Range Header', 416);
+    const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/);
+    if (!match || (!match[1] && !match[2])) {
+      return c.text('Invalid Range Header', 416);
+    }
 
-    const start = parseInt(match[1], 10);
-    const end = match[2] ? parseInt(match[2], 10) : track.file_size - 1;
+    let start: number;
+    let end: number;
 
-    if (start >= track.file_size || end >= track.file_size) {
+    if (match[1]) {
+      start = parseInt(match[1], 10);
+      end = match[2] ? parseInt(match[2], 10) : track.file_size - 1;
+    } else {
+      const suffixLength = parseInt(match[2], 10);
+      if (!suffixLength) {
+        return new Response('Range Not Satisfiable', {
+          status: 416,
+          headers: { 'Content-Range': `bytes */${track.file_size}` },
+        });
+      }
+      start = Math.max(track.file_size - suffixLength, 0);
+      end = track.file_size - 1;
+    }
+
+    if (start >= track.file_size || start > end) {
       return new Response('Range Not Satisfiable', {
         status: 416,
         headers: { 'Content-Range': `bytes */${track.file_size}` },
       });
     }
+
+    end = Math.min(end, track.file_size - 1);
 
     const object = await c.env.R2_BUCKET.get(track.r2_key, {
       range: { offset: start, length: end - start + 1 },
@@ -514,10 +544,8 @@ app.get('/api/tracks/:id/stream', requireAuth, async (c) => {
 
     if (!object) return c.text('File missing in R2', 404);
 
-    const headers = new Headers();
+    const headers = new Headers(commonHeaders);
     object.writeHttpMetadata(headers);
-    headers.set('Content-Type', track.mime_type || 'audio/mpeg');
-    headers.set('Accept-Ranges', 'bytes');
     headers.set('Content-Range', `bytes ${start}-${end}/${track.file_size}`);
     headers.set('Content-Length', (end - start + 1).toString());
 
@@ -544,7 +572,7 @@ app.post('/api/tracks', requireAuth, async (c) => {
     const fileExtension = parts.length > 1 ? parts.pop()! : 'mp3';
     const r2Key = `tracks/${user.id}/${trackId}.${fileExtension}`;
 
-    // Загрузка файла в R2 бакет
+    // Upload to R2 first; remove the object if metadata persistence fails.
     const arrayBuffer = await file.arrayBuffer();
     await c.env.R2_BUCKET.put(r2Key, arrayBuffer, {
       httpMetadata: { contentType: file.type || 'audio/mpeg' },
@@ -559,24 +587,29 @@ app.post('/api/tracks', requireAuth, async (c) => {
     const now = Math.floor(Date.now() / 1000);
 
     // Запись в D1 с учетом структуры таблицы
-    await c.env.DB.prepare(`
-      INSERT INTO tracks (
-        id, user_id, title, artist, album, mime_type, file_size,
-        file_extension, r2_key, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      trackId,
-      user.id,
-      title,
-      artist,
-      album,
-      mimeType,
-      fileSize,
-      fileExtension,
-      r2Key,
-      now,
-      now
-    ).run();
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO tracks (
+          id, user_id, title, artist, album, mime_type, file_size,
+          file_extension, r2_key, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        trackId,
+        user.id,
+        title,
+        artist,
+        album,
+        mimeType,
+        fileSize,
+        fileExtension,
+        r2Key,
+        now,
+        now
+      ).run();
+    } catch (dbError) {
+      await c.env.R2_BUCKET.delete(r2Key);
+      throw dbError;
+    }
 
     return c.json({ id: trackId, title, artist, album });
   } catch (err: any) {
