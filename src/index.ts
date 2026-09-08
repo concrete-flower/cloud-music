@@ -1062,7 +1062,7 @@ app.get('/', (c) => {
   </script>
 </body>
 </html>`);
-}
+});
 
 // --- Auth Endpoints ---
 app.post('/api/auth/login', async (c) => {
