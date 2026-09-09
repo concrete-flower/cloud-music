@@ -18,21 +18,33 @@ export const STYLES = `
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-  html, body {
-    margin: 0;
-    min-height: 100%;
-    background: var(--bg);
-    overscroll-behavior-y: none;
+  html {
+    height: 100%;
+    overflow-x: hidden;
+    /* Installed PWAs shouldn't rubber-band sideways or pinch-zoom like a
+       regular webpage -- this keeps the whole app feeling like a native
+       screen rather than a website in a frame. */
+    overscroll-behavior: none;
+    touch-action: pan-y;
   }
 
   body {
+    margin: 0;
+    min-height: 100%;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    background: var(--bg);
+    overscroll-behavior-y: none;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
     color: var(--text);
     -webkit-font-smoothing: antialiased;
   }
 
+  img, svg { max-width: 100%; }
+
   button, input, select, textarea { font: inherit; color: inherit; }
-  button { border: 0; background: transparent; cursor: pointer; }
+  button { border: 0; background: transparent; cursor: pointer; touch-action: manipulation; }
   a { color: inherit; }
 
   .hidden { display: none !important; }
@@ -108,7 +120,7 @@ export const STYLES = `
   /* ---------- App shell ---------- */
   .app-shell {
     min-height: 100dvh;
-    width: min(720px, 100%);
+    width: min(480px, 100%);
     margin: 0 auto;
     padding: var(--safe-t) 18px calc(var(--nav-height) + 20px + var(--safe-b));
   }
@@ -137,6 +149,13 @@ export const STYLES = `
   }
 
   .view { padding-top: 6px; }
+
+  #home-view {
+    min-height: calc(100dvh - 56px - var(--safe-t) - var(--nav-height) - var(--safe-b) - 30px);
+    display: flex;
+    align-items: center;
+  }
+  #home-view .hero { width: 100%; }
   .view-header { display: flex; align-items: center; justify-content: space-between; margin: 10px 0 18px; gap: 10px; }
   .view-title { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
   .section-title { margin: 26px 0 12px; font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
@@ -209,9 +228,11 @@ export const STYLES = `
   .controls { display: flex; align-items: center; justify-content: center; gap: 30px; margin: 18px 0 8px; }
   .play-button {
     width: 60px; height: 60px; border-radius: 50%; background: #fff; color: #000;
-    display: grid; place-items: center;
+    display: flex; align-items: center; justify-content: center;
   }
-  .play-button .icon-play { margin-left: 3px; }
+  /* Lucide's play triangle is already ~centered in its own box; only the
+     play glyph (not pause) needs a hair of optical correction to the right. */
+  .play-button svg.icon-play { position: relative; left: 1px; }
 
   .sub-controls { display: flex; justify-content: center; gap: 26px; margin-top: 4px; }
   .sub-controls button { color: var(--muted); }
@@ -382,10 +403,20 @@ export const STYLES = `
   }
   .modal-list-item:last-child { border-bottom: 0; }
 
-  @media (min-width: 700px) {
-    .app-shell { padding-left: 28px; padding-right: 28px; }
-    .topbar { margin-left: -28px; margin-right: -28px; padding-left: 28px; padding-right: 28px; }
-    .mini-player { left: 50%; right: auto; width: 560px; transform: translateX(-50%); }
+  /* On anything wider than a phone, render the app as a fixed-width phone-like
+     column instead of stretching everything edge to edge -- keeps the player
+     and lists readable and stops track rows from looking absurdly wide. */
+  @media (min-width: 620px) {
+    body { background: #000; }
+    #login-screen { width: min(400px, 100%); }
+    .app-shell {
+      width: 480px;
+      box-shadow: 0 0 0 1px var(--line);
+    }
+    .topbar { background: var(--bg); }
+    .mini-player, .bottom-nav { left: 50%; right: auto; transform: translateX(-50%); }
+    .mini-player { width: 444px; }
+    .bottom-nav { width: 480px; }
     .form-row { grid-template-columns: 1fr 1fr 1fr; }
   }
 `;

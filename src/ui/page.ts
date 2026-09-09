@@ -26,7 +26,7 @@ export function renderPage(): string {
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -74,7 +74,7 @@ export function renderPage(): string {
 
         <div class="controls">
           <button class="icon-button" id="prev-button" aria-label="Предыдущий">${icon('skip-back', 24)}</button>
-          <button class="play-button" id="play-button" aria-label="Воспроизвести"><span class="icon-play">${icon('play', 24)}</span></button>
+          <button class="play-button" id="play-button" aria-label="Воспроизвести">${icon('play', 24)}</button>
           <button class="icon-button" id="next-button" aria-label="Следующий">${icon('skip-forward', 24)}</button>
         </div>
 
@@ -83,9 +83,6 @@ export function renderPage(): string {
           <button id="repeat-button" aria-label="Повтор">${icon('repeat', 19)}</button>
         </div>
       </div>
-
-      <h2 class="section-title">Недавно добавленные</h2>
-      <div id="recent-list" class="track-list"></div>
     </section>
 
     <!-- ===== Медиатека ===== -->
