@@ -19,7 +19,7 @@ app.get('/manifest.webmanifest', (c) => {
   return c.json({
     name: 'Music Cloud',
     short_name: 'Music Cloud',
-    description: 'Личное облачное хранилище музыки',
+    description: 'Personal cloud music library',
     start_url: '/',
     scope: '/',
     display: 'standalone',

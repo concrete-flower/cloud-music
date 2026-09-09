@@ -36,12 +36,25 @@ export const STYLES = `
     overflow-x: hidden;
     background: var(--bg);
     overscroll-behavior-y: none;
+    scroll-behavior: smooth;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
     color: var(--text);
     -webkit-font-smoothing: antialiased;
+    /* No text selection / copy / iOS "Copy, Look Up" callout anywhere in
+       the app shell -- this is a player, not a document. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
-  img, svg { max-width: 100%; }
+  img, svg { max-width: 100%; -webkit-user-drag: none; user-drag: none; }
+
+  /* ...except real text-entry fields, which obviously need to stay selectable. */
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
 
   button, input, select, textarea { font: inherit; color: inherit; }
   button { border: 0; background: transparent; cursor: pointer; touch-action: manipulation; }
@@ -205,11 +218,11 @@ export const STYLES = `
 
   .hero-title {
     margin: 20px 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.4px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;
+    padding: 0 24px;
   }
   .hero-subtitle {
     color: var(--muted); font-size: 14.5px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;
+    padding: 0 24px;
   }
 
   .progress-wrap { margin: 22px 2px 6px; }
@@ -239,10 +252,15 @@ export const STYLES = `
   .sub-controls button.active { color: var(--accent); }
 
   /* ---------- Track rows ---------- */
-  .track-list { display: grid; gap: 1px; }
+  /* grid-template-columns: minmax(0, 1fr) is what actually stops a long,
+     unbroken track/artist name from stretching the whole page sideways --
+     grid tracks default to content-based sizing, so without this a single
+     wide row could blow out the entire layout (that was the root cause of
+     the search tab looking wider than every other screen). */
+  .track-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
 
   .track-row {
-    width: 100%; min-height: 60px; padding: 6px 4px;
+    width: 100%; min-width: 0; min-height: 64px; padding: 6px 2px 6px 4px;
     border-radius: 10px; display: flex; align-items: center; gap: 12px; text-align: left;
   }
   .track-row:active { background: var(--surface); }
@@ -255,11 +273,31 @@ export const STYLES = `
   }
   .track-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-  .track-info { min-width: 0; flex: 1; }
-  .track-name { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .track-meta { margin-top: 2px; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-info { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+  .track-name { font-size: 16px; font-weight: 650; letter-spacing: -.1px; }
+  .track-sub { color: var(--muted); font-size: 12.5px; font-weight: 500; }
 
-  .track-more { width: 32px; flex: 0 0 32px; color: var(--muted); display: grid; place-items: center; }
+  /* Marquee: text only scrolls if it actually overflows its box (set via JS
+     after layout), so short titles just sit still like normal text. */
+  .marquee { overflow: hidden; white-space: nowrap; }
+  .marquee-inner { display: inline-block; white-space: nowrap; will-change: transform; }
+  .marquee-inner.scrolling {
+    animation-name: marquee-bounce;
+    animation-duration: var(--marquee-duration, 9s);
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  @keyframes marquee-bounce {
+    0%, 12% { transform: translateX(0); }
+    45%, 55% { transform: translateX(var(--marquee-distance, 0)); }
+    88%, 100% { transform: translateX(0); }
+  }
+
+  .track-more {
+    width: 40px; height: 40px; flex: 0 0 40px; margin: -4px -2px -4px 0;
+    color: var(--muted); display: grid; place-items: center; border-radius: 50%;
+  }
+  .track-more:active { background: var(--surface-2); }
 
   .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
   .empty .icon { margin: 0 auto 14px; color: var(--muted-2); }
@@ -330,7 +368,7 @@ export const STYLES = `
   }
   .admin-user:last-child { border-bottom: 0; }
   .admin-user-name { font-size: 14.5px; font-weight: 600; }
-  .admin-user-role { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .admin-user-role { color: var(--muted); font-size: 12px; margin-top: 3px; }
   .admin-user button { width: 32px; height: 32px; border-radius: 50%; color: #ff6961; display: grid; place-items: center; }
 
   /* ---------- Mini player ---------- */
@@ -351,10 +389,9 @@ export const STYLES = `
   .mini-art { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 7px; background: var(--surface-2); overflow: hidden; }
   .mini-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-  .mini-info { min-width: 0; flex: 1; }
-  .mini-title, .mini-artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-info { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
   .mini-title { font-size: 13.5px; font-weight: 650; }
-  .mini-artist { margin-top: 1px; color: var(--muted); font-size: 12px; }
+  .mini-artist { color: var(--muted); font-size: 12px; }
   .mini-play, .mini-next { width: 38px; height: 38px; display: grid; place-items: center; }
 
   /* ---------- Bottom nav ---------- */
@@ -396,7 +433,13 @@ export const STYLES = `
     width: 100%; max-width: 480px; max-height: 78vh; overflow-y: auto;
     background: #1c1c1e; border-radius: 18px 18px 0 0; padding: 18px 18px calc(20px + var(--safe-b));
   }
-  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-title {
+    font-size: 17px; font-weight: 700; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  #track-menu-title {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+  }
   .modal-list-item {
     width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 12px 4px; border-bottom: 1px solid var(--line); font-size: 15px; text-align: left;

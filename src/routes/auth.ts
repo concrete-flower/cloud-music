@@ -6,7 +6,7 @@ export const authRoutes = new Hono<AppEnv>();
 
 authRoutes.post('/login', async (c) => {
   const { username, password } = await c.req.json().catch(() => ({}) as any);
-  if (!username || !password) return c.json({ error: 'Заполните логин и пароль' }, 400);
+  if (!username || !password) return c.json({ error: 'Enter a username and password' }, 400);
 
   const userCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first<{ count: number }>();
   let user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>();
@@ -23,11 +23,11 @@ authRoutes.post('/login', async (c) => {
 
     user = { id: userId, username, password_hash: fullHash, role: 'admin' };
   } else if (!user) {
-    return c.json({ error: 'Неверный логин или пароль' }, 401);
+    return c.json({ error: 'Incorrect username or password' }, 401);
   } else {
     const calculatedHash = await hashPassword(password, user.password_hash);
     if (calculatedHash !== user.password_hash) {
-      return c.json({ error: 'Неверный логин или пароль' }, 401);
+      return c.json({ error: 'Incorrect username or password' }, 401);
     }
   }
 

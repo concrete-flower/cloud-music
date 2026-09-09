@@ -25,7 +25,7 @@ playlistRoutes.post('/', async (c) => {
   const user = c.get('user');
   const { name, description } = await c.req.json().catch(() => ({}) as any);
   const trimmedName = String(name || '').trim();
-  if (!trimmedName) return c.json({ error: 'Укажите название плейлиста' }, 400);
+  if (!trimmedName) return c.json({ error: 'Enter a playlist name' }, 400);
 
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
@@ -46,7 +46,7 @@ playlistRoutes.get('/:id', async (c) => {
   const playlist = await c.env.DB.prepare('SELECT id, name, description, created_at FROM playlists WHERE id = ? AND user_id = ?')
     .bind(id, user.id)
     .first();
-  if (!playlist) return c.json({ error: 'Плейлист не найден' }, 404);
+  if (!playlist) return c.json({ error: 'Playlist not found' }, 404);
 
   const { results } = await c.env.DB.prepare(
     `SELECT t.id, t.title, t.artist, t.album, t.duration_seconds, t.cover_key, pt.position
@@ -69,7 +69,7 @@ playlistRoutes.patch('/:id', async (c) => {
   const { name, description } = await c.req.json().catch(() => ({}) as any);
 
   const playlist = await c.env.DB.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').bind(id, user.id).first();
-  if (!playlist) return c.json({ error: 'Плейлист не найден' }, 404);
+  if (!playlist) return c.json({ error: 'Playlist not found' }, 404);
 
   const now = Math.floor(Date.now() / 1000);
   await c.env.DB.prepare('UPDATE playlists SET name = COALESCE(?, name), description = ?, updated_at = ? WHERE id = ?')
@@ -84,7 +84,7 @@ playlistRoutes.delete('/:id', async (c) => {
   const id = c.req.param('id');
 
   const playlist = await c.env.DB.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').bind(id, user.id).first();
-  if (!playlist) return c.json({ error: 'Плейлист не найден' }, 404);
+  if (!playlist) return c.json({ error: 'Playlist not found' }, 404);
 
   await c.env.DB.prepare('DELETE FROM playlists WHERE id = ?').bind(id).run();
   return c.json({ status: 'ok' });
@@ -94,15 +94,15 @@ playlistRoutes.post('/:id/tracks', async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   const { track_id } = await c.req.json().catch(() => ({}) as any);
-  if (!track_id) return c.json({ error: 'Не указан трек' }, 400);
+  if (!track_id) return c.json({ error: 'Missing track id' }, 400);
 
   const playlist = await c.env.DB.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').bind(id, user.id).first();
-  if (!playlist) return c.json({ error: 'Плейлист не найден' }, 404);
+  if (!playlist) return c.json({ error: 'Playlist not found' }, 404);
 
   const track = await c.env.DB.prepare("SELECT id FROM tracks WHERE id = ? AND user_id = ? AND status = 'ready'")
     .bind(track_id, user.id)
     .first();
-  if (!track) return c.json({ error: 'Трек не найден' }, 404);
+  if (!track) return c.json({ error: 'Track not found' }, 404);
 
   const last = await c.env.DB.prepare('SELECT MAX(position) as max_pos FROM playlist_tracks WHERE playlist_id = ?')
     .bind(id)
@@ -122,7 +122,7 @@ playlistRoutes.delete('/:id/tracks/:trackId', async (c) => {
   const trackId = c.req.param('trackId');
 
   const playlist = await c.env.DB.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').bind(id, user.id).first();
-  if (!playlist) return c.json({ error: 'Плейлист не найден' }, 404);
+  if (!playlist) return c.json({ error: 'Playlist not found' }, 404);
 
   await c.env.DB.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?').bind(id, trackId).run();
   return c.json({ status: 'ok' });
@@ -132,10 +132,10 @@ playlistRoutes.put('/:id/tracks/reorder', async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   const { order } = await c.req.json().catch(() => ({}) as any);
-  if (!Array.isArray(order)) return c.json({ error: 'Некорректный порядок' }, 400);
+  if (!Array.isArray(order)) return c.json({ error: 'Invalid order' }, 400);
 
   const playlist = await c.env.DB.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').bind(id, user.id).first();
-  if (!playlist) return c.json({ error: 'Плейлист не найден' }, 404);
+  if (!playlist) return c.json({ error: 'Playlist not found' }, 404);
 
   const statements = order.map((trackId: string, index: number) =>
     c.env.DB.prepare('UPDATE playlist_tracks SET position = ? WHERE playlist_id = ? AND track_id = ?').bind(index, id, trackId)

@@ -15,14 +15,14 @@ userRoutes.get('/', async (c) => {
 
 userRoutes.post('/', async (c) => {
   const { username, password, role } = await c.req.json().catch(() => ({}) as any);
-  if (!username || !password) return c.json({ error: 'Заполните логин и пароль' }, 400);
-  if (password.length < 6) return c.json({ error: 'Пароль слишком короткий (минимум 6 символов)' }, 400);
+  if (!username || !password) return c.json({ error: 'Enter a username and password' }, 400);
+  if (password.length < 6) return c.json({ error: 'Password is too short (min. 6 characters)' }, 400);
 
   const existing = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?').bind(username).first();
-  if (existing) return c.json({ error: 'Пользователь уже существует' }, 400);
+  if (existing) return c.json({ error: 'That username is already taken' }, 400);
 
   if (role && role !== 'admin' && role !== 'user') {
-    return c.json({ error: 'Недопустимая роль' }, 400);
+    return c.json({ error: 'Invalid role' }, 400);
   }
 
   const fullHash = await hashPassword(password);
@@ -41,7 +41,7 @@ userRoutes.delete('/:id', async (c) => {
   const currentUser = c.get('user');
 
   if (userId === currentUser.id) {
-    return c.json({ error: 'Нельзя удалить самого себя' }, 400);
+    return c.json({ error: "You can't delete your own account" }, 400);
   }
 
   // Clean up the user's R2 objects (tracks + covers) before dropping the row;

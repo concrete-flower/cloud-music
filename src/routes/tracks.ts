@@ -45,9 +45,9 @@ trackRoutes.post('/', async (c) => {
   const mimeType = String(body.mime_type || 'audio/mpeg');
   const fileSize = Number(body.file_size) || 0;
 
-  if (!title) return c.json({ error: 'Не указано название трека' }, 400);
+  if (!title) return c.json({ error: 'Missing track title' }, 400);
   if (fileSize <= 0 || fileSize > MAX_UPLOAD_BYTES) {
-    return c.json({ error: 'Недопустимый размер файла' }, 400);
+    return c.json({ error: 'Invalid file size' }, 400);
   }
 
   const trackId = crypto.randomUUID();
@@ -94,12 +94,12 @@ trackRoutes.put('/:id/audio', async (c) => {
     .bind(trackId, user.id)
     .first<{ id: string; r2_key: string; mime_type: string; file_size: number }>();
 
-  if (!track) return c.json({ error: 'Трек не найден' }, 404);
-  if (!c.req.raw.body) return c.json({ error: 'Пустое тело запроса' }, 400);
+  if (!track) return c.json({ error: 'Track not found' }, 404);
+  if (!c.req.raw.body) return c.json({ error: 'Empty request body' }, 400);
 
   const contentLength = Number(c.req.header('Content-Length') || 0);
   if (contentLength > MAX_UPLOAD_BYTES) {
-    return c.json({ error: 'Файл слишком большой' }, 413);
+    return c.json({ error: 'File is too large' }, 413);
   }
 
   try {
@@ -107,8 +107,8 @@ trackRoutes.put('/:id/audio', async (c) => {
       httpMetadata: { contentType: track.mime_type || 'audio/mpeg' },
     });
   } catch (err: any) {
-    console.error('Ошибка загрузки аудио в R2:', err);
-    return c.json({ error: 'Не удалось сохранить файл' }, 500);
+    console.error('Failed to upload audio to R2:', err);
+    return c.json({ error: 'Could not save the file' }, 500);
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -126,12 +126,12 @@ trackRoutes.put('/:id/cover', async (c) => {
     .bind(trackId, user.id)
     .first<{ id: string }>();
 
-  if (!track) return c.json({ error: 'Трек не найден' }, 404);
-  if (!c.req.raw.body) return c.json({ error: 'Пустое тело запроса' }, 400);
+  if (!track) return c.json({ error: 'Track not found' }, 404);
+  if (!c.req.raw.body) return c.json({ error: 'Empty request body' }, 400);
 
   const contentLength = Number(c.req.header('Content-Length') || 0);
   if (contentLength > MAX_COVER_BYTES) {
-    return c.json({ error: 'Обложка слишком большая' }, 413);
+    return c.json({ error: 'Cover image is too large' }, 413);
   }
 
   const contentType = c.req.header('Content-Type') || 'image/jpeg';
@@ -141,8 +141,8 @@ trackRoutes.put('/:id/cover', async (c) => {
   try {
     await c.env.R2_BUCKET.put(coverKey, c.req.raw.body, { httpMetadata: { contentType } });
   } catch (err: any) {
-    console.error('Ошибка загрузки обложки в R2:', err);
-    return c.json({ error: 'Не удалось сохранить обложку' }, 500);
+    console.error('Failed to upload cover art to R2:', err);
+    return c.json({ error: 'Could not save the cover art' }, 500);
   }
 
   await c.env.DB.prepare('UPDATE tracks SET cover_key = ? WHERE id = ?').bind(coverKey, trackId).run();
@@ -250,7 +250,7 @@ trackRoutes.get('/:id/stream', async (c) => {
 
     return new Response(object.body, { status: 206, headers });
   } catch (err: any) {
-    console.error('Ошибка стриминга:', err);
+    console.error('Streaming error:', err);
     return c.text('Internal Error', 500);
   }
 });
@@ -264,7 +264,7 @@ trackRoutes.patch('/:id', async (c) => {
   const track = await c.env.DB.prepare('SELECT id FROM tracks WHERE id = ? AND user_id = ?')
     .bind(trackId, user.id)
     .first();
-  if (!track) return c.json({ error: 'Трек не найден' }, 404);
+  if (!track) return c.json({ error: 'Track not found' }, 404);
 
   const fields: Record<string, any> = {};
   for (const key of ['title', 'artist', 'album', 'album_artist', 'genre']) {
@@ -274,7 +274,7 @@ trackRoutes.patch('/:id', async (c) => {
     if (body[key] === null || Number.isFinite(body[key])) fields[key] = body[key] ?? null;
   }
 
-  if (Object.keys(fields).length === 0) return c.json({ error: 'Нечего обновлять' }, 400);
+  if (Object.keys(fields).length === 0) return c.json({ error: 'Nothing to update' }, 400);
 
   const setClause = Object.keys(fields)
     .map((k) => `${k} = ?`)
@@ -298,7 +298,7 @@ trackRoutes.delete('/:id', async (c) => {
     .bind(trackId, user.id)
     .first<{ r2_key: string; cover_key: string | null }>();
 
-  if (!track) return c.json({ error: 'Трек не найден' }, 404);
+  if (!track) return c.json({ error: 'Track not found' }, 404);
 
   await c.env.R2_BUCKET.delete(track.r2_key).catch(() => {});
   if (track.cover_key) await c.env.R2_BUCKET.delete(track.cover_key).catch(() => {});
