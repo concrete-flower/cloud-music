@@ -270,8 +270,31 @@ export const STYLES = `
     width: 46px; height: 46px; flex: 0 0 46px; border-radius: 7px;
     background: var(--surface-2); color: var(--muted-2);
     display: grid; place-items: center; overflow: hidden;
+    position: relative;
   }
   .track-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* "Now playing" indicator on the cover thumbnail -- an equalizer that only
+     animates while audio is actually playing; a currently-loaded-but-paused
+     track shows the same bars frozen, same idea as Apple Music/Spotify. */
+  .eq-overlay {
+    position: absolute; inset: 0; display: none;
+    align-items: flex-end; justify-content: center; gap: 2.5px;
+    background: rgba(0, 0, 0, .45);
+  }
+  .track-row.playing .eq-overlay { display: flex; }
+  .eq-bar {
+    width: 3px; height: 40%; border-radius: 1px; background: #fff;
+    transform-origin: bottom;
+  }
+  .track-row.row-audio-playing .eq-bar { animation: eq-bounce 0.85s ease-in-out infinite; }
+  .track-row.row-audio-playing .eq-bar:nth-child(1) { animation-delay: -0.6s; }
+  .track-row.row-audio-playing .eq-bar:nth-child(2) { animation-delay: -0.3s; }
+  .track-row.row-audio-playing .eq-bar:nth-child(3) { animation-delay: 0s; }
+  @keyframes eq-bounce {
+    0%, 100% { height: 25%; }
+    50% { height: 85%; }
+  }
 
   .track-info { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
   .track-name { font-size: 16px; font-weight: 650; letter-spacing: -.1px; }
@@ -312,22 +335,30 @@ export const STYLES = `
   .search-box input:focus { border: 0; }
 
   /* ---------- Cards / forms ---------- */
-  .card { padding: 16px; border-radius: 16px; background: var(--surface); margin-bottom: 14px; }
+  .card { padding: 16px; border-radius: 16px; background: var(--surface); margin-bottom: 22px; }
   .card h2 { margin: 0 0 12px; font-size: 17px; font-weight: 700; }
   .form { display: grid; gap: 10px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
+  /* iOS-Settings-style group label above a card/list -- makes each section of
+     the Profile screen read as its own clearly-labeled block. */
+  .section-label {
+    margin: 0 4px 8px; font-size: 12px; font-weight: 650; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted-2);
+  }
+
   .profile-row {
-    display: flex; align-items: center; gap: 14px; padding: 6px 2px 20px;
+    display: flex; align-items: center; gap: 14px; padding: 6px 2px 24px;
   }
   .profile-avatar {
-    width: 56px; height: 56px; border-radius: 50%; background: var(--surface-2);
+    width: 56px; height: 56px; flex: 0 0 56px; border-radius: 50%; background: var(--surface-2);
     color: var(--muted); font-size: 20px; font-weight: 700; display: grid; place-items: center;
   }
   .profile-name { font-size: 19px; font-weight: 700; }
   .profile-role { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .profile-stats { color: var(--muted-2); font-size: 12.5px; margin-top: 6px; }
 
-  .menu-list { border-radius: 14px; background: var(--surface); overflow: hidden; margin-bottom: 14px; }
+  .menu-list { border-radius: 14px; background: var(--surface); overflow: hidden; margin-bottom: 22px; }
   .menu-item {
     width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 14px;
     border-bottom: 1px solid var(--line); text-align: left; font-size: 15px;

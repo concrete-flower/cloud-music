@@ -110,7 +110,7 @@ export function renderPage(): string {
           <div class="view-header">
             <button id="playlist-back" class="icon-button muted">${icon('chevron-left', 24)}</button>
             <h1 class="view-title" id="playlist-detail-title" style="font-size:22px;"></h1>
-            <span style="width:38px;"></span>
+            <button id="playlist-delete" class="icon-button muted" aria-label="Delete playlist">${icon('trash-2', 19)}</button>
           </div>
           <div id="playlist-detail-list" class="track-list"></div>
         </div>
@@ -136,11 +136,12 @@ export function renderPage(): string {
         <div>
           <div class="profile-name" id="profile-name"></div>
           <div class="profile-role" id="profile-role"></div>
+          <div class="profile-stats" id="profile-stats"></div>
         </div>
       </div>
 
+      <div class="section-label">Add Music</div>
       <div class="card">
-        <h2>Add Music</h2>
         <div id="drop-zone" class="drop-zone">
           ${icon('upload-cloud', 30)}
           <div class="drop-zone-title">Choose files or drop them here</div>
@@ -150,20 +151,23 @@ export function renderPage(): string {
         <div id="upload-queue" class="upload-queue"></div>
       </div>
 
-      <div id="admin-section" class="card hidden">
-        <h2>Users</h2>
-        <form id="create-user-form" class="form">
-          <input type="text" id="new-username" placeholder="New username" required>
-          <input type="password" id="new-password" placeholder="Password (min. 6 characters)" required>
-          <select id="new-role">
-            <option value="user">Member</option>
-            <option value="admin">Administrator</option>
-          </select>
-          <button type="submit" class="secondary-button">Create User</button>
-        </form>
-        <div id="users-list" style="margin-top:14px;"></div>
+      <div id="admin-section" class="hidden">
+        <div class="section-label">Admin</div>
+        <div class="card">
+          <form id="create-user-form" class="form">
+            <input type="text" id="new-username" placeholder="New username" required>
+            <input type="password" id="new-password" placeholder="Password (min. 6 characters)" required>
+            <select id="new-role">
+              <option value="user">Member</option>
+              <option value="admin">Administrator</option>
+            </select>
+            <button type="submit" class="secondary-button">Create User</button>
+          </form>
+          <div id="users-list" style="margin-top:14px;"></div>
+        </div>
       </div>
 
+      <div class="section-label">Account</div>
       <div class="menu-list">
         <button id="logout-button" class="menu-item danger">${icon('log-out', 19)} Sign Out</button>
       </div>
