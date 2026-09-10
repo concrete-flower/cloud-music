@@ -47,11 +47,18 @@ shareRoutes.post('/', async (c) => {
   const token = randomToken();
   const now = Math.floor(Date.now() / 1000);
 
-  await c.env.DB.prepare(
-    'INSERT INTO shares (token, owner_user_id, kind, target_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
-  )
-    .bind(token, user.id, kind, target_id, now, now + SHARE_TTL_SECONDS)
-    .run();
+  try {
+    await c.env.DB.prepare(
+      'INSERT INTO shares (token, owner_user_id, kind, target_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+      .bind(token, user.id, kind, target_id, now, now + SHARE_TTL_SECONDS)
+      .run();
+  } catch (err: any) {
+    console.error('Failed to create share:', err);
+    // Most likely cause: migrations/0004_shares_and_liked_songs.sql hasn't
+    // been applied to this database yet (no "shares" table).
+    return c.json({ error: 'Could not create share link -- has the latest database migration been applied?' }, 500);
+  }
 
   const origin = new URL(c.req.url).origin;
   return c.json({ token, url: `${origin}/s/${token}` });

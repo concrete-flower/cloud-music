@@ -44,28 +44,35 @@ playlistRoutes.post('/', async (c) => {
 playlistRoutes.get('/liked', async (c) => {
   const user = c.get('user');
 
-  let liked = await c.env.DB.prepare("SELECT id FROM playlists WHERE user_id = ? AND system_key = 'liked'")
-    .bind(user.id)
-    .first<{ id: string }>();
+  try {
+    let liked = await c.env.DB.prepare("SELECT id FROM playlists WHERE user_id = ? AND system_key = 'liked'")
+      .bind(user.id)
+      .first<{ id: string }>();
 
-  if (!liked) {
-    const id = crypto.randomUUID();
-    const now = Math.floor(Date.now() / 1000);
-    await c.env.DB.prepare(
-      "INSERT INTO playlists (id, user_id, name, is_shared, system_key, created_at, updated_at) VALUES (?, ?, 'Liked Songs', 0, 'liked', ?, ?)"
+    if (!liked) {
+      const id = crypto.randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      await c.env.DB.prepare(
+        "INSERT INTO playlists (id, user_id, name, is_shared, system_key, created_at, updated_at) VALUES (?, ?, 'Liked Songs', 0, 'liked', ?, ?)"
+      )
+        .bind(id, user.id, now, now)
+        .run();
+      liked = { id };
+    }
+
+    const { results } = await c.env.DB.prepare(
+      'SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC'
     )
-      .bind(id, user.id, now, now)
-      .run();
-    liked = { id };
+      .bind(liked.id)
+      .all<{ track_id: string }>();
+
+    return c.json({ id: liked.id, track_ids: (results || []).map((r) => r.track_id) });
+  } catch (err: any) {
+    console.error('Failed to load/create Liked Songs:', err);
+    // Most likely cause: migrations/0004_shares_and_liked_songs.sql hasn't
+    // been applied to this database yet (no "system_key" column).
+    return c.json({ error: 'Could not load Liked Songs -- has the latest database migration been applied?' }, 500);
   }
-
-  const { results } = await c.env.DB.prepare(
-    'SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC'
-  )
-    .bind(liked.id)
-    .all<{ track_id: string }>();
-
-  return c.json({ id: liked.id, track_ids: (results || []).map((r) => r.track_id) });
 });
 
 playlistRoutes.get('/:id', async (c) => {
