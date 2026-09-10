@@ -10,6 +10,7 @@ const CLIENT_ICONS: Record<string, string> = {
   playlist: icon('list-music', 20),
   search: icon('search', 30),
   trash: icon('trash-2', 18),
+  share: icon('share', 18),
   play: icon('play', 22),
   pause: icon('pause', 22),
 };
@@ -79,8 +80,12 @@ export function renderPage(): string {
         </div>
 
         <div class="sub-controls">
-          <button id="shuffle-button" aria-label="Shuffle">${icon('shuffle', 19)}</button>
-          <button id="repeat-button" aria-label="Repeat">${icon('repeat', 19)}</button>
+          <button id="like-button" class="like-button" aria-label="Like">${icon('heart', 21)}</button>
+          <div class="sub-controls-center">
+            <button id="shuffle-button" aria-label="Shuffle">${icon('shuffle', 19)}</button>
+            <button id="repeat-button" aria-label="Repeat">${icon('repeat', 19)}</button>
+          </div>
+          <button id="share-button" aria-label="Share">${icon('share', 20)}</button>
         </div>
       </div>
     </section>
@@ -110,7 +115,10 @@ export function renderPage(): string {
           <div class="view-header">
             <button id="playlist-back" class="icon-button muted">${icon('chevron-left', 24)}</button>
             <h1 class="view-title" id="playlist-detail-title" style="font-size:22px;"></h1>
-            <button id="playlist-delete" class="icon-button muted" aria-label="Delete playlist">${icon('trash-2', 19)}</button>
+            <span style="display:flex;gap:2px;">
+              <button id="playlist-share" class="icon-button muted" aria-label="Share playlist">${icon('share', 18)}</button>
+              <button id="playlist-delete" class="icon-button muted" aria-label="Delete playlist">${icon('trash-2', 19)}</button>
+            </span>
           </div>
           <div id="playlist-detail-list" class="track-list"></div>
         </div>

@@ -135,7 +135,11 @@ export const STYLES = `
     min-height: 100dvh;
     width: min(480px, 100%);
     margin: 0 auto;
-    padding: var(--safe-t) 18px calc(var(--nav-height) + 20px + var(--safe-b));
+    /* Reserve room for the bottom nav AND the floating mini-player above it
+       (mini-player sits var(--mini-height) tall, 8px above the nav) -- this
+       is reserved unconditionally so content never sits under either one,
+       whether or not something happens to be playing right now. */
+    padding: var(--safe-t) 18px calc(var(--nav-height) + var(--mini-height) + var(--safe-b) + 24px);
   }
 
   .topbar {
@@ -226,14 +230,32 @@ export const STYLES = `
   }
 
   .progress-wrap { margin: 22px 2px 6px; }
+  /* The input itself is a tall, fully transparent hit target (28px) so the
+     thumb is easy to grab on a phone; the visible thin track/fill lives on
+     the pseudo-elements, vertically centered inside that hit area. */
   input[type="range"] {
     appearance: none; -webkit-appearance: none;
-    width: 100%; height: 4px; padding: 0; border: 0; border-radius: 2px;
-    background: var(--surface-3);
+    width: 100%; height: 28px; margin: 0; padding: 0; border: 0;
+    background: transparent;
+    --progress-pct: 0%;
   }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(
+      to right,
+      var(--text) var(--progress-pct),
+      var(--surface-3) var(--progress-pct)
+    );
+  }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--surface-3); }
+  input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--text); }
   input[type="range"]::-webkit-slider-thumb {
     appearance: none; -webkit-appearance: none;
-    width: 13px; height: 13px; border-radius: 50%; background: #fff;
+    width: 15px; height: 15px; border-radius: 50%; background: #fff;
+    margin-top: -5.5px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 15px; height: 15px; border-radius: 50%; background: #fff; border: 0;
   }
 
   .time-row { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 6px; }
@@ -247,9 +269,14 @@ export const STYLES = `
      play glyph (not pause) needs a hair of optical correction to the right. */
   .play-button svg.icon-play { position: relative; left: 1px; }
 
-  .sub-controls { display: flex; justify-content: center; gap: 26px; margin-top: 4px; }
+  /* Like (left) / shuffle+repeat (center) / share (right) -- given its own
+     row with real breathing room below the transport controls so it doesn't
+     read as one crowded cluster. */
+  .sub-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; padding: 0 6px; }
+  .sub-controls-center { display: flex; justify-content: center; gap: 26px; }
   .sub-controls button { color: var(--muted); }
   .sub-controls button.active { color: var(--accent); }
+  .like-button.active svg { fill: currentColor; }
 
   /* ---------- Track rows ---------- */
   /* grid-template-columns: minmax(0, 1fr) is what actually stops a long,

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv, TrackRow } from '../types';
 import { requireAuth } from '../auth';
+import { streamR2Object, coverResponse } from '../streaming';
 
 export const trackRoutes = new Hono<AppEnv>();
 
@@ -159,17 +160,8 @@ trackRoutes.get('/:id/cover', async (c) => {
     .bind(trackId, user.id)
     .first<{ cover_key: string | null }>();
 
-  if (!track || !track.cover_key) return c.text('Not found', 404);
-
-  const object = await c.env.R2_BUCKET.get(track.cover_key);
-  if (!object) return c.text('Not found', 404);
-
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set('Cache-Control', 'private, max-age=31536000, immutable');
-  headers.set('ETag', object.httpEtag);
-
-  return new Response(object.body, { headers });
+  if (!track) return c.text('Not found', 404);
+  return coverResponse(c.env, track.cover_key);
 });
 
 // --- Range-aware audio streaming ---
@@ -186,69 +178,7 @@ trackRoutes.get('/:id/stream', async (c) => {
 
     if (!track) return c.text('Track not found', 404);
 
-    const rangeHeader = c.req.header('Range');
-
-    const commonHeaders = {
-      'Accept-Ranges': 'bytes',
-      'Content-Type': track.mime_type || 'audio/mpeg',
-      'Cache-Control': 'private, no-store',
-    };
-
-    if (!rangeHeader) {
-      const object = await c.env.R2_BUCKET.get(track.r2_key);
-      if (!object) return c.text('File missing in R2', 404);
-
-      const headers = new Headers(commonHeaders);
-      object.writeHttpMetadata(headers);
-      headers.set('Content-Length', track.file_size.toString());
-
-      return new Response(object.body, { headers });
-    }
-
-    const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/);
-    if (!match || (!match[1] && !match[2])) {
-      return c.text('Invalid Range Header', 416);
-    }
-
-    let start: number;
-    let end: number;
-
-    if (match[1]) {
-      start = parseInt(match[1], 10);
-      end = match[2] ? parseInt(match[2], 10) : track.file_size - 1;
-    } else {
-      const suffixLength = parseInt(match[2], 10);
-      if (!suffixLength) {
-        return new Response('Range Not Satisfiable', {
-          status: 416,
-          headers: { 'Content-Range': `bytes */${track.file_size}` },
-        });
-      }
-      start = Math.max(track.file_size - suffixLength, 0);
-      end = track.file_size - 1;
-    }
-
-    if (start >= track.file_size || start > end) {
-      return new Response('Range Not Satisfiable', {
-        status: 416,
-        headers: { 'Content-Range': `bytes */${track.file_size}` },
-      });
-    }
-
-    end = Math.min(end, track.file_size - 1);
-
-    const object = await c.env.R2_BUCKET.get(track.r2_key, {
-      range: { offset: start, length: end - start + 1 },
-    });
-
-    if (!object) return c.text('File missing in R2', 404);
-
-    const headers = new Headers(commonHeaders);
-    object.writeHttpMetadata(headers);
-    headers.set('Content-Range', `bytes ${start}-${end}/${track.file_size}`);
-    headers.set('Content-Length', (end - start + 1).toString());
-
-    return new Response(object.body, { status: 206, headers });
+    return await streamR2Object(c, track.r2_key, track.mime_type, track.file_size);
   } catch (err: any) {
     console.error('Streaming error:', err);
     return c.text('Internal Error', 500);

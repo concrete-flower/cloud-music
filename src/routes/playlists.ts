@@ -39,6 +39,35 @@ playlistRoutes.post('/', async (c) => {
   return c.json({ id, name: trimmedName });
 });
 
+// Find-or-create the user's single "Liked Songs" playlist. Registered before
+// GET /:id so "liked" is never swallowed as a playlist id param.
+playlistRoutes.get('/liked', async (c) => {
+  const user = c.get('user');
+
+  let liked = await c.env.DB.prepare("SELECT id FROM playlists WHERE user_id = ? AND system_key = 'liked'")
+    .bind(user.id)
+    .first<{ id: string }>();
+
+  if (!liked) {
+    const id = crypto.randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    await c.env.DB.prepare(
+      "INSERT INTO playlists (id, user_id, name, is_shared, system_key, created_at, updated_at) VALUES (?, ?, 'Liked Songs', 0, 'liked', ?, ?)"
+    )
+      .bind(id, user.id, now, now)
+      .run();
+    liked = { id };
+  }
+
+  const { results } = await c.env.DB.prepare(
+    'SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC'
+  )
+    .bind(liked.id)
+    .all<{ track_id: string }>();
+
+  return c.json({ id: liked.id, track_ids: (results || []).map((r) => r.track_id) });
+});
+
 playlistRoutes.get('/:id', async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');

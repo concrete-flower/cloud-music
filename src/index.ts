@@ -4,7 +4,9 @@ import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
 import { trackRoutes } from './routes/tracks';
 import { playlistRoutes } from './routes/playlists';
+import { shareRoutes, publicShareRoutes } from './routes/share';
 import { renderPage } from './ui/page';
+import { renderSharePage } from './ui/share-page';
 import { SW_SCRIPT } from './ui/sw';
 import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512 } from './ui/icon-assets';
 
@@ -12,6 +14,9 @@ const app = new Hono<AppEnv>();
 
 // --- App shell ---
 app.get('/', (c) => c.html(renderPage()));
+
+// Public share page -- deliberately outside the app shell, no auth.
+app.get('/s/:token', (c) => c.html(renderSharePage(c.req.param('token'))));
 
 app.get('/sw.js', (c) => c.body(SW_SCRIPT, 200, { 'Content-Type': 'text/javascript; charset=UTF-8' }));
 
@@ -68,5 +73,7 @@ app.route('/api/auth', authRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/tracks', trackRoutes);
 app.route('/api/playlists', playlistRoutes);
+app.route('/api/shares', shareRoutes);
+app.route('/api/public/shares', publicShareRoutes);
 
 export default app;
