@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../types';
-import { hashPassword, createSession, destroySession, requireAuth } from '../auth';
+import { hashPassword, createSession, destroySession, requireAuth, timingSafeEqualHex } from '../auth';
 
 export const authRoutes = new Hono<AppEnv>();
 
@@ -36,7 +36,7 @@ authRoutes.post('/login', async (c) => {
     return c.json({ error: 'Incorrect username or password' }, 401);
   } else {
     const calculatedHash = await hashPassword(password, user.password_hash);
-    if (calculatedHash !== user.password_hash) {
+    if (!timingSafeEqualHex(calculatedHash, user.password_hash)) {
       return c.json({ error: 'Incorrect username or password' }, 401);
     }
   }

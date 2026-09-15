@@ -5,6 +5,19 @@ import type { AppEnv } from './types';
 const SESSION_COOKIE = 'music_session';
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
+/** Constant-time comparison of two equal-length hex strings, to avoid leaking
+ *  timing information about how many leading characters of a password hash
+ *  matched. Falls back to a length check (not constant-time, but the length
+ *  of a hex-encoded hash is not a secret) when lengths differ. */
+export function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 /** PBKDF2 password hashing. Stored as "saltHex:hashHex". */
 export async function hashPassword(password: string, storedHash?: string): Promise<string> {
   const enc = new TextEncoder();

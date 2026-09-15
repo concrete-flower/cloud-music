@@ -7,4 +7,4 @@ node_modules/
 worker-configuration.d.ts
 music/
 *.txt
-scripts/
+scripts/worker-configuration.d.ts
