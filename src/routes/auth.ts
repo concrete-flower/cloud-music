@@ -23,9 +23,25 @@ authRoutes.post('/login', async (c) => {
 
   if (userCount?.count === 0) {
     // First account ever created on this deployment becomes the admin.
+    // Guard against two concurrent first logins both passing the count
+    // check above: only whichever request wins this single-row insert
+    // gets to bootstrap the admin account.
+    const now = Math.floor(Date.now() / 1000);
+    let wonBootstrap = true;
+    try {
+      await c.env.DB.prepare('INSERT INTO bootstrap_lock (id, claimed_by, claimed_at) VALUES (1, ?, ?)')
+        .bind(username, now)
+        .run();
+    } catch {
+      wonBootstrap = false;
+    }
+
+    if (!wonBootstrap) {
+      return c.json({ error: 'Setup already in progress -- try logging in again in a moment' }, 409);
+    }
+
     const fullHash = await hashPassword(password);
     const userId = 'usr_' + crypto.randomUUID().slice(0, 8);
-    const now = Math.floor(Date.now() / 1000);
 
     await c.env.DB.prepare('INSERT INTO users (id, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)')
       .bind(userId, username, fullHash, 'admin', now)
