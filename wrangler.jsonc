@@ -19,6 +19,13 @@
 			"database_id": "43a48769-0367-4835-8f2d-b01cef7b3d7a"
 		}
 	],
+	"ratelimits": [
+		{
+			"name": "LOGIN_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": { "limit": 10, "period": 60 }
+		}
+	],
 	"routes": [
 		{
 			"pattern": "music.casablanque.com",

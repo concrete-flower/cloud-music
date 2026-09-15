@@ -168,11 +168,29 @@ export const STYLES = `
   .view { padding-top: 6px; }
 
   #home-view {
+    position: relative;
     min-height: calc(100dvh - 56px - var(--safe-t) - var(--nav-height) - var(--safe-b) - 30px);
     display: flex;
     align-items: center;
   }
-  #home-view .hero { width: 100%; }
+  #home-view .hero { position: relative; width: 100%; z-index: 1; }
+
+  /* Soft, oversized blur of the current cover art behind the player --
+     negative insets push the hard blur edge off past the visible area so
+     there's no rectangular seam. Sits behind the hero content (z-index -1
+     inside #home-view's own stacking context) and is allowed to bleed under
+     the translucent topbar/mini-player/bottom-nav for a unified wash of
+     color instead of a flat black screen. */
+  .home-backdrop {
+    position: absolute;
+    top: -100px; left: -40px; right: -40px; bottom: -100px;
+    background-size: cover; background-position: center;
+    filter: blur(70px) saturate(1.6) brightness(.55);
+    opacity: 0; transition: opacity .5s ease;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .home-backdrop.visible { opacity: 1; }
   .view-header { display: flex; align-items: center; justify-content: space-between; margin: 10px 0 18px; gap: 10px; }
   .view-title { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
   .section-title { margin: 26px 0 12px; font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
@@ -277,6 +295,15 @@ export const STYLES = `
   .sub-controls button { color: var(--muted); }
   .sub-controls button.active { color: var(--accent); }
   .like-button.active svg { fill: currentColor; }
+
+  /* ---------- Library toolbar ---------- */
+  .library-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; }
+  .library-toolbar-label { font-size: 12.5px; color: var(--muted); }
+  select.sort-select {
+    width: auto; height: 30px; padding: 0 10px; border-radius: 15px;
+    background: var(--surface); border: 1px solid var(--line);
+    font-size: 12.5px; font-weight: 600; color: var(--text);
+  }
 
   /* ---------- Track rows ---------- */
   /* grid-template-columns: minmax(0, 1fr) is what actually stops a long,
@@ -418,6 +445,12 @@ export const STYLES = `
   .upload-item-status.done { color: #32d74b; }
   .upload-bar { height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
   .upload-bar-fill { height: 100%; background: var(--text); width: 0%; transition: width .15s; }
+  .upload-retry {
+    display: block; margin-top: 8px; width: fit-content;
+    background: var(--surface-3); border-radius: 8px; padding: 6px 12px;
+    font-size: 12.5px; font-weight: 650; color: var(--text);
+  }
+  .upload-retry:active { opacity: .7; }
 
   /* ---------- Admin ---------- */
   .admin-user {

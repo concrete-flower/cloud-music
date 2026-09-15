@@ -60,6 +60,7 @@ export function renderPage(): string {
 
     <!-- ===== Listen ===== -->
     <section id="home-view" class="view">
+      <div id="home-backdrop" class="home-backdrop"></div>
       <div class="hero">
         <div class="artwork" id="hero-art">${icon('music-4', 56)}</div>
         <div class="hero-title" id="hero-title">Nothing playing</div>
@@ -100,6 +101,15 @@ export function renderPage(): string {
       </div>
 
       <div id="library-tracks-panel">
+        <div class="library-toolbar">
+          <label for="library-sort" class="library-toolbar-label">Sort</label>
+          <select id="library-sort" class="sort-select">
+            <option value="artist">Artist</option>
+            <option value="title">Title</option>
+            <option value="recent">Recently Added</option>
+            <option value="album">Album</option>
+          </select>
+        </div>
         <div id="library-list" class="track-list"></div>
       </div>
 

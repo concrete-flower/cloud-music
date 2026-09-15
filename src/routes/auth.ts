@@ -8,6 +8,16 @@ authRoutes.post('/login', async (c) => {
   const { username, password } = await c.req.json().catch(() => ({}) as any);
   if (!username || !password) return c.json({ error: 'Enter a username and password' }, 400);
 
+  // Basic brute-force protection: a handful of attempts per minute per IP.
+  // This is per-Cloudflare-location, not perfectly global, but it's enough
+  // to blunt automated password guessing without getting in a real
+  // person's way if they fat-finger their password a few times.
+  const ip = c.req.header('cf-connecting-ip') || 'unknown';
+  const { success } = await c.env.LOGIN_RATE_LIMITER.limit({ key: ip });
+  if (!success) {
+    return c.json({ error: 'Too many login attempts -- wait a minute and try again' }, 429);
+  }
+
   const userCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first<{ count: number }>();
   let user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>();
 

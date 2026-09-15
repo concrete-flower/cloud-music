@@ -1,6 +1,7 @@
 export type Bindings = {
   DB: D1Database;
   R2_BUCKET: R2Bucket;
+  LOGIN_RATE_LIMITER: RateLimit;
 };
 
 export type AuthUser = {
