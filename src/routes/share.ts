@@ -64,6 +64,34 @@ shareRoutes.post('/', async (c) => {
   return c.json({ token, url: `${origin}/s/${token}` });
 });
 
+// --- List the current user's share links ---
+shareRoutes.get('/', async (c) => {
+  const user = c.get('user');
+  const { results } = await c.env.DB.prepare(
+    `SELECT token, kind, target_id, created_at, expires_at FROM shares
+     WHERE owner_user_id = ? ORDER BY created_at DESC`
+  )
+    .bind(user.id)
+    .all<Omit<ShareRow, 'owner_user_id'>>();
+
+  const origin = new URL(c.req.url).origin;
+  const shares = (results || []).map((s) => ({ ...s, url: `${origin}/s/${s.token}` }));
+  return c.json({ shares });
+});
+
+// --- Revoke a share link ---
+shareRoutes.delete('/:token', async (c) => {
+  const user = c.get('user');
+  const token = c.req.param('token');
+
+  const result = await c.env.DB.prepare('DELETE FROM shares WHERE token = ? AND owner_user_id = ?')
+    .bind(token, user.id)
+    .run();
+
+  if (!result.meta.changes) return c.json({ error: 'Share link not found' }, 404);
+  return c.json({ status: 'ok' });
+});
+
 // --- Public, token-authorized playback (no login required) ---
 export const publicShareRoutes = new Hono<AppEnv>();
 
