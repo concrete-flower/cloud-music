@@ -10,19 +10,20 @@ import { renderPage } from './ui/page';
 import { renderSharePage } from './ui/share-page';
 import { SW_SCRIPT } from './ui/sw';
 import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512 } from './ui/icon-assets';
+import { MUSIC_METADATA_BUNDLE_B64 } from './ui/vendor-assets';
 
 const app = new Hono<AppEnv>();
 
 app.use(
   '*',
   secureHeaders({
-    // The client fetches album art from a covers/ R2 path we control and
-    // loads its metadata-parsing library from esm.sh at runtime -- both
-    // need to stay allowed. Everything else defaults to same-origin.
+    // Album art fallback still calls out to iTunes at runtime (see
+    // fetchFallbackCover in client.ts); everything else is same-origin,
+    // including the vendored tag-parsing lib at /vendor/music-metadata.js.
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https://esm.sh'],
-      connectSrc: ["'self'", 'https://esm.sh', 'https://itunes.apple.com', 'https://*.mzstatic.com'],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'", 'https://itunes.apple.com', 'https://*.mzstatic.com'],
       imgSrc: ["'self'", 'data:'],
       styleSrc: ["'self'", "'unsafe-inline'"],
       mediaSrc: ["'self'"],
@@ -88,6 +89,16 @@ pngRoute('/icon-32.png', ICON_PNG_32);
 pngRoute('/icon-180.png', ICON_PNG_180);
 pngRoute('/icon-192.png', ICON_PNG_192);
 pngRoute('/icon-512.png', ICON_PNG_512);
+
+// Vendored tag-parsing library, served same-origin instead of pulled from
+// esm.sh at runtime -- see src/ui/vendor-assets.ts for how it's built.
+app.get('/vendor/music-metadata.js', (c) => {
+  const bytes = Uint8Array.from(atob(MUSIC_METADATA_BUNDLE_B64), (ch) => ch.charCodeAt(0));
+  return c.body(bytes, 200, {
+    'Content-Type': 'application/javascript; charset=UTF-8',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  });
+});
 
 // --- API ---
 app.route('/api/auth', authRoutes);

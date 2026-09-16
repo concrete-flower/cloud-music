@@ -942,7 +942,7 @@ export const CLIENT_SCRIPT = [
 
 'async function parseTags(file) {',
 '  try {',
-'    var mm = await import("https://esm.sh/music-metadata-browser@2.5.10?bundle");',
+'    var mm = await import("/vendor/music-metadata.js");',
 '    var meta = await mm.parseBlob(file);',
 '    var common = meta.common || {};',
 '    var picture = common.picture && common.picture[0];',
