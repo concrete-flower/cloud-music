@@ -462,6 +462,16 @@ export const STYLES = `
   .admin-user-role { color: var(--muted); font-size: 12px; margin-top: 3px; }
   .admin-user button { width: 32px; height: 32px; border-radius: 50%; color: #ff6961; display: grid; place-items: center; }
 
+  /* ---------- Shared links ---------- */
+  .share-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid var(--line);
+  }
+  .share-row:last-child { border-bottom: 0; }
+  .share-row-name { font-size: 14.5px; font-weight: 600; }
+  .share-row-meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .share-row button { width: 32px; height: 32px; border-radius: 50%; color: #ff6961; display: grid; place-items: center; }
+
   /* ---------- Mini player ---------- */
   .mini-player {
     position: fixed; z-index: 20; left: 10px; right: 10px;

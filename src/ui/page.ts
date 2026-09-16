@@ -169,6 +169,12 @@ export function renderPage(): string {
         <div id="upload-queue" class="upload-queue"></div>
       </div>
 
+      <div class="section-label">Shared Links</div>
+      <div class="card">
+        <div id="shares-empty" class="hidden" style="opacity:.6;font-size:14px;">No active share links yet.</div>
+        <div id="shares-list"></div>
+      </div>
+
       <div id="admin-section" class="hidden">
         <div class="section-label">Admin</div>
         <div class="card">
