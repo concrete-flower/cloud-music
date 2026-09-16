@@ -31,5 +31,8 @@
 			"pattern": "music.casablanque.com",
 			"custom_domain": true
 		}
-	]
+	],
+	"triggers": {
+		"crons": ["17 3 * * *"]
+	}
 }

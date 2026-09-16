@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
-import type { AppEnv } from './types';
+import { secureHeaders } from 'hono/secure-headers';
+import type { AppEnv, Bindings } from './types';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
-import { trackRoutes } from './routes/tracks';
+import { trackRoutes, cleanupStalePendingTracks } from './routes/tracks';
 import { playlistRoutes } from './routes/playlists';
 import { shareRoutes, publicShareRoutes } from './routes/share';
 import { renderPage } from './ui/page';
@@ -11,6 +12,26 @@ import { SW_SCRIPT } from './ui/sw';
 import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512 } from './ui/icon-assets';
 
 const app = new Hono<AppEnv>();
+
+app.use(
+  '*',
+  secureHeaders({
+    // The client fetches album art from a covers/ R2 path we control and
+    // loads its metadata-parsing library from esm.sh at runtime -- both
+    // need to stay allowed. Everything else defaults to same-origin.
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", 'https://esm.sh'],
+      connectSrc: ["'self'", 'https://esm.sh', 'https://itunes.apple.com', 'https://*.mzstatic.com'],
+      imgSrc: ["'self'", 'data:'],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      mediaSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  })
+);
 
 // --- App shell ---
 app.get('/', (c) => c.html(renderPage()));
@@ -76,4 +97,13 @@ app.route('/api/playlists', playlistRoutes);
 app.route('/api/shares', shareRoutes);
 app.route('/api/public/shares', publicShareRoutes);
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
+    ctx.waitUntil(
+      cleanupStalePendingTracks(env).then((count) => {
+        if (count) console.log(`Cleaned up ${count} stale pending track(s)`);
+      })
+    );
+  },
+};
