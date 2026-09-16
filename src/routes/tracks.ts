@@ -14,6 +14,10 @@ trackRoutes.use('*', requireAuth);
 // need a paid plan or a multipart-upload flow.
 const MAX_UPLOAD_BYTES = 300 * 1024 * 1024;
 const MAX_COVER_BYTES = 15 * 1024 * 1024;
+// A little above the client's own chunk size (see MULTIPART_CHUNK_BYTES in
+// client.ts) -- generous headroom, just a sanity cap against a misbehaving
+// or malicious client sending one giant "part".
+const MAX_PART_BYTES = 64 * 1024 * 1024;
 
 function coverUrl(track: Pick<TrackRow, 'id' | 'cover_key'>): string | null {
   return track.cover_key ? `/api/tracks/${track.id}/cover` : null;
@@ -27,6 +31,29 @@ const STALE_PENDING_AGE_SECONDS = 24 * 60 * 60;
 
 export async function cleanupStalePendingTracks(env: Bindings): Promise<number> {
   const cutoff = Math.floor(Date.now() / 1000) - STALE_PENDING_AGE_SECONDS;
+
+  const { results: stale } = await env.DB.prepare(
+    `SELECT t.id, m.r2_key, m.upload_id
+     FROM tracks t
+     LEFT JOIN multipart_uploads m ON m.track_id = t.id
+     WHERE t.status = 'pending' AND t.created_at < ?`
+  )
+    .bind(cutoff)
+    .all<{ id: string; r2_key: string | null; upload_id: string | null }>();
+
+  for (const row of stale || []) {
+    if (row.r2_key && row.upload_id) {
+      // R2 does not expire abandoned multipart uploads on its own -- an
+      // orphaned one just sits there holding its parts (and their storage
+      // cost) forever unless explicitly aborted.
+      await env.R2_BUCKET.resumeMultipartUpload(row.r2_key, row.upload_id)
+        .abort()
+        .catch(() => {});
+    }
+  }
+
+  // multipart_uploads rows for these tracks cascade-delete along with them
+  // (FOREIGN KEY ... ON DELETE CASCADE in migrations/0006).
   const result = await env.DB.prepare(
     `DELETE FROM tracks WHERE status = 'pending' AND created_at < ?`
   )
@@ -133,6 +160,151 @@ trackRoutes.put('/:id/audio', async (c) => {
 
   const now = Math.floor(Date.now() / 1000);
   await c.env.DB.prepare("UPDATE tracks SET status = 'ready', updated_at = ? WHERE id = ?").bind(now, trackId).run();
+
+  return c.json({ status: 'ok' });
+});
+
+// --- Multipart upload: for files too big (or connections too flaky) for a
+// single-shot PUT. The client chunks the file with Blob.slice() and drives
+// these three calls itself; see uploadFileMultipart() in client.ts. ---
+
+trackRoutes.post('/:id/audio/multipart/start', async (c) => {
+  const user = c.get('user');
+  const trackId = c.req.param('id');
+
+  const track = await c.env.DB.prepare(
+    "SELECT id, r2_key, mime_type FROM tracks WHERE id = ? AND user_id = ? AND status = 'pending'"
+  )
+    .bind(trackId, user.id)
+    .first<{ id: string; r2_key: string; mime_type: string }>();
+  if (!track) return c.json({ error: 'Track not found' }, 404);
+
+  // Guard against a client calling /start twice for the same track (e.g. a
+  // retried request) and leaking a multipart upload in R2. Only one
+  // in-flight multipart upload per track is meaningful.
+  const existing = await c.env.DB.prepare('SELECT upload_id FROM multipart_uploads WHERE track_id = ?')
+    .bind(trackId)
+    .first<{ upload_id: string }>();
+  if (existing) {
+    await c.env.R2_BUCKET.resumeMultipartUpload(track.r2_key, existing.upload_id)
+      .abort()
+      .catch(() => {});
+    await c.env.DB.prepare('DELETE FROM multipart_uploads WHERE track_id = ?').bind(trackId).run();
+  }
+
+  let upload;
+  try {
+    upload = await c.env.R2_BUCKET.createMultipartUpload(track.r2_key, {
+      httpMetadata: { contentType: track.mime_type || 'audio/mpeg' },
+    });
+  } catch (err: any) {
+    console.error('Failed to start multipart upload:', err);
+    return c.json({ error: 'Could not start upload' }, 500);
+  }
+
+  await c.env.DB.prepare('INSERT INTO multipart_uploads (track_id, r2_key, upload_id, created_at) VALUES (?, ?, ?, ?)')
+    .bind(trackId, track.r2_key, upload.uploadId, Math.floor(Date.now() / 1000))
+    .run();
+
+  return c.json({ upload_id: upload.uploadId });
+});
+
+trackRoutes.put('/:id/audio/multipart/:uploadId/:partNumber', async (c) => {
+  const user = c.get('user');
+  const trackId = c.req.param('id');
+  const uploadId = c.req.param('uploadId');
+  const partNumber = Number(c.req.param('partNumber'));
+
+  if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) {
+    return c.json({ error: 'Invalid part number' }, 400);
+  }
+
+  const record = await c.env.DB.prepare(
+    `SELECT m.r2_key FROM multipart_uploads m
+     JOIN tracks t ON t.id = m.track_id
+     WHERE m.track_id = ? AND m.upload_id = ? AND t.user_id = ?`
+  )
+    .bind(trackId, uploadId, user.id)
+    .first<{ r2_key: string }>();
+  if (!record) return c.json({ error: 'Upload not found' }, 404);
+  if (!c.req.raw.body) return c.json({ error: 'Empty part' }, 400);
+
+  const contentLength = Number(c.req.header('Content-Length') || 0);
+  if (contentLength <= 0 || contentLength > MAX_PART_BYTES) {
+    return c.json({ error: 'Invalid part size' }, 400);
+  }
+
+  try {
+    const upload = c.env.R2_BUCKET.resumeMultipartUpload(record.r2_key, uploadId);
+    const part = await upload.uploadPart(partNumber, c.req.raw.body);
+    return c.json({ part_number: part.partNumber, etag: part.etag });
+  } catch (err: any) {
+    console.error('Failed to upload part:', err);
+    return c.json({ error: 'Could not upload this part' }, 500);
+  }
+});
+
+trackRoutes.post('/:id/audio/multipart/:uploadId/complete', async (c) => {
+  const user = c.get('user');
+  const trackId = c.req.param('id');
+  const uploadId = c.req.param('uploadId');
+  const body = await c.req.json().catch(() => ({}) as any);
+
+  const parts = Array.isArray(body.parts) ? body.parts : [];
+  if (!parts.length) return c.json({ error: 'Missing parts' }, 400);
+
+  const record = await c.env.DB.prepare(
+    `SELECT m.r2_key FROM multipart_uploads m
+     JOIN tracks t ON t.id = m.track_id
+     WHERE m.track_id = ? AND m.upload_id = ? AND t.user_id = ?`
+  )
+    .bind(trackId, uploadId, user.id)
+    .first<{ r2_key: string }>();
+  if (!record) return c.json({ error: 'Upload not found' }, 404);
+
+  const uploadedParts = parts
+    .map((p: any) => ({ partNumber: Number(p.part_number), etag: String(p.etag || '') }))
+    .filter((p: any) => Number.isInteger(p.partNumber) && p.etag);
+  if (!uploadedParts.length) return c.json({ error: 'Missing parts' }, 400);
+
+  try {
+    const upload = c.env.R2_BUCKET.resumeMultipartUpload(record.r2_key, uploadId);
+    await upload.complete(uploadedParts);
+  } catch (err: any) {
+    console.error('Failed to complete multipart upload:', err);
+    return c.json({ error: 'Could not finish the upload -- some parts may be missing or out of order' }, 500);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE tracks SET status = 'ready', updated_at = ? WHERE id = ?").bind(now, trackId),
+    c.env.DB.prepare('DELETE FROM multipart_uploads WHERE track_id = ?').bind(trackId),
+  ]);
+
+  return c.json({ status: 'ok' });
+});
+
+trackRoutes.post('/:id/audio/multipart/:uploadId/abort', async (c) => {
+  const user = c.get('user');
+  const trackId = c.req.param('id');
+  const uploadId = c.req.param('uploadId');
+
+  const record = await c.env.DB.prepare(
+    `SELECT m.r2_key FROM multipart_uploads m
+     JOIN tracks t ON t.id = m.track_id
+     WHERE m.track_id = ? AND m.upload_id = ? AND t.user_id = ?`
+  )
+    .bind(trackId, uploadId, user.id)
+    .first<{ r2_key: string }>();
+  if (!record) return c.json({ error: 'Upload not found' }, 404);
+
+  await c.env.R2_BUCKET.resumeMultipartUpload(record.r2_key, uploadId)
+    .abort()
+    .catch(() => {});
+
+  // An explicit cancel -- unlike a stale pending track, no need to wait for
+  // the cron job. Drop the track row too (multipart_uploads cascades).
+  await c.env.DB.prepare('DELETE FROM tracks WHERE id = ?').bind(trackId).run();
 
   return c.json({ status: 'ok' });
 });
