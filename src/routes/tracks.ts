@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AppEnv, TrackRow } from '../types';
+import type { AppEnv, Bindings, TrackRow } from '../types';
 import { requireAuth } from '../auth';
 import { streamR2Object, coverResponse } from '../streaming';
 
@@ -17,6 +17,22 @@ const MAX_COVER_BYTES = 15 * 1024 * 1024;
 
 function coverUrl(track: Pick<TrackRow, 'id' | 'cover_key'>): string | null {
   return track.cover_key ? `/api/tracks/${track.id}/cover` : null;
+}
+
+// A track stays 'pending' between POST /api/tracks (metadata written) and
+// PUT /:id/audio (bytes uploaded). If the upload never happens -- tab
+// closed, network dropped -- the row lingers forever with no audio behind
+// it. Called from the scheduled() handler in index.ts once a day.
+const STALE_PENDING_AGE_SECONDS = 24 * 60 * 60;
+
+export async function cleanupStalePendingTracks(env: Bindings): Promise<number> {
+  const cutoff = Math.floor(Date.now() / 1000) - STALE_PENDING_AGE_SECONDS;
+  const result = await env.DB.prepare(
+    `DELETE FROM tracks WHERE status = 'pending' AND created_at < ?`
+  )
+    .bind(cutoff)
+    .run();
+  return result.meta.changes ?? 0;
 }
 
 // --- List ---
@@ -47,6 +63,9 @@ trackRoutes.post('/', async (c) => {
   const fileSize = Number(body.file_size) || 0;
 
   if (!title) return c.json({ error: 'Missing track title' }, 400);
+  if (!mimeType.startsWith('audio/')) {
+    return c.json({ error: 'File does not look like audio' }, 400);
+  }
   if (fileSize <= 0 || fileSize > MAX_UPLOAD_BYTES) {
     return c.json({ error: 'Invalid file size' }, 400);
   }
@@ -136,7 +155,17 @@ trackRoutes.put('/:id/cover', async (c) => {
   }
 
   const contentType = c.req.header('Content-Type') || 'image/jpeg';
-  const ext = contentType.includes('png') ? 'png' : 'jpg';
+  if (!contentType.startsWith('image/')) {
+    return c.json({ error: 'Cover must be an image' }, 400);
+  }
+  const extByType: Record<string, string> = {
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/avif': 'avif',
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+  };
+  const ext = extByType[contentType] || 'jpg';
   const coverKey = `covers/${user.id}/${trackId}.${ext}`;
 
   try {
