@@ -3,7 +3,7 @@
 // this is a small self-contained page that fetches the public share JSON
 // and renders native <audio> players. Kept separate from ui/page.ts so the
 // full app's client script (auth, upload, playlists...) never loads here.
-export function renderSharePage(token: string): string {
+export function renderSharePage(token: string, nonce: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,7 +49,7 @@ export function renderSharePage(token: string): string {
     <div class="brand"><img src="/icon-192.png" alt=""> Music Cloud</div>
     <div id="content">Loading&hellip;</div>
   </div>
-  <script>
+  <script nonce="${nonce}">
   (function () {
     var token = ${JSON.stringify(token)};
     var content = document.getElementById("content");

@@ -22,7 +22,7 @@ function iconsScriptTag(): string {
   return `var ICONS = {\n    ${entries}\n  };`;
 }
 
-export function renderPage(): string {
+export function renderPage(nonce: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -264,7 +264,7 @@ export function renderPage(): string {
 
   <audio id="audio-player" preload="metadata" playsinline></audio>
 
-  <script>
+  <script nonce="${nonce}">
   ${iconsScriptTag()}
   ${CLIENT_SCRIPT}
   </script>

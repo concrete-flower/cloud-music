@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { secureHeaders } from 'hono/secure-headers';
+import { secureHeaders, NONCE } from 'hono/secure-headers';
 import type { AppEnv, Bindings } from './types';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
@@ -20,10 +20,24 @@ app.use(
     // Album art fallback still calls out to iTunes at runtime (see
     // fetchFallbackCover in client.ts); everything else is same-origin,
     // including the vendored tag-parsing lib at /vendor/music-metadata.js.
+    //
+    // page.ts/share-page.ts embed the whole client script inline rather
+    // than as a separate file, so it needs a per-request nonce rather than
+    // just 'self' -- see NONCE below and the nonce="..." attribute on each
+    // <script> tag. If you have "Web Analytics" auto-injection turned on
+    // for this zone in the Cloudflare dashboard, Cloudflare inserts its own
+    // beacon script at the edge (not something this app's HTML controls),
+    // hence the cloudflareinsights.com allowance below; turn that toggle
+    // off in the dashboard and remove it here if you'd rather not have it.
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", 'https://itunes.apple.com', 'https://*.mzstatic.com'],
+      scriptSrc: ["'self'", NONCE, 'https://static.cloudflareinsights.com'],
+      connectSrc: [
+        "'self'",
+        'https://itunes.apple.com',
+        'https://*.mzstatic.com',
+        'https://cloudflareinsights.com',
+      ],
       imgSrc: ["'self'", 'data:'],
       styleSrc: ["'self'", "'unsafe-inline'"],
       mediaSrc: ["'self'"],
@@ -35,10 +49,10 @@ app.use(
 );
 
 // --- App shell ---
-app.get('/', (c) => c.html(renderPage()));
+app.get('/', (c) => c.html(renderPage(c.get('secureHeadersNonce') || '')));
 
 // Public share page -- deliberately outside the app shell, no auth.
-app.get('/s/:token', (c) => c.html(renderSharePage(c.req.param('token'))));
+app.get('/s/:token', (c) => c.html(renderSharePage(c.req.param('token'), c.get('secureHeadersNonce') || '')));
 
 app.get('/sw.js', (c) => c.body(SW_SCRIPT, 200, { 'Content-Type': 'text/javascript; charset=UTF-8' }));
 
