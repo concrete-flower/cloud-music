@@ -9,7 +9,7 @@ import { shareRoutes, publicShareRoutes } from './routes/share';
 import { renderPage } from './ui/page';
 import { renderSharePage } from './ui/share-page';
 import { SW_SCRIPT } from './ui/sw';
-import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512 } from './ui/icon-assets';
+import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512, APP_LOGO_SVG } from './ui/icon-assets';
 import { MUSIC_METADATA_BUNDLE_B64 } from './ui/vendor-assets';
 
 const app = new Hono<AppEnv>();
@@ -58,8 +58,8 @@ app.get('/sw.js', (c) => c.body(SW_SCRIPT, 200, { 'Content-Type': 'text/javascri
 
 app.get('/manifest.webmanifest', (c) => {
   return c.json({
-    name: 'Music Cloud',
-    short_name: 'Music Cloud',
+    name: 'Unsubscribed',
+    short_name: 'Unsubscribed',
     description: 'Personal cloud music library',
     start_url: '/',
     scope: '/',
@@ -76,17 +76,7 @@ app.get('/manifest.webmanifest', (c) => {
 });
 
 app.get('/icon.svg', (c) => {
-  return c.body(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#3a3a3c"/><stop offset="1" stop-color="#0a0a0b"/>
-      </linearGradient></defs>
-      <rect width="512" height="512" rx="112" fill="url(#g)"/>
-      <path d="M204 128v186.2c-11-5.3-23.8-8.2-37.5-8.2-38.4 0-69.5 24.6-69.5 55s31.1 55 69.5 55 69.5-24.6 69.5-55V196l144-32v122.2c-11-5.3-23.8-8.2-37.5-8.2-38.4 0-69.5 24.6-69.5 55s31.1 55 69.5 55 69.5-24.6 69.5-55V96l-208 32z" fill="#f5f5f7"/>
-    </svg>`,
-    200,
-    { 'Content-Type': 'image/svg+xml; charset=UTF-8' }
-  );
+  return c.body(APP_LOGO_SVG, 200, { 'Content-Type': 'image/svg+xml; charset=UTF-8' });
 });
 
 function pngRoute(path: string, base64: string) {

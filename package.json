@@ -1,5 +1,5 @@
 {
-  "name": "music-cloud",
+  "name": "unsubscribed",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "types": "wrangler types",
     "check": "tsc --noEmit",
-    "build:vendor": "node scripts/build-vendor-bundle.mjs"
+    "build:vendor": "node scripts/build-vendor-bundle.mjs",
+    "build:icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "hono": "^4.9.0"
@@ -16,6 +17,7 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "music-metadata-browser": "^2.5.10",
+    "sharp": "^0.35.4",
     "typescript": "^5.9.0",
     "wrangler": "^4.35.0"
   }

@@ -31,18 +31,18 @@ export function renderPage(nonce: string): string {
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Music Cloud">
+  <meta name="apple-mobile-web-app-title" content="Unsubscribed">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon-180.png">
-  <title>Music Cloud</title>
+  <title>Unsubscribed</title>
   <style>${STYLES}</style>
 </head>
 <body>
   <section id="login-screen" class="hidden">
     <div class="login-logo"><img src="/icon-192.png" alt=""></div>
-    <h1 class="login-title">Music Cloud</h1>
+    <h1 class="login-title">Unsubscribed</h1>
     <p class="login-subtitle">Your music. No subscription.</p>
     <form id="login-form" class="login-form">
       <input type="text" id="login-username" placeholder="Username" autocomplete="username" required>
@@ -53,10 +53,7 @@ export function renderPage(nonce: string): string {
   </section>
 
   <main id="app-screen" class="app-shell hidden">
-    <header class="topbar">
-      <div class="brand"><img src="/icon-192.png" alt=""> Music Cloud</div>
-      <button class="user-button" id="user-button" aria-label="Profile"><span id="user-initial"></span></button>
-    </header>
+    <div class="app-brand" aria-hidden="true">Unsubscribed</div>
 
     <!-- ===== Listen ===== -->
     <section id="home-view" class="view">
@@ -102,7 +99,7 @@ export function renderPage(nonce: string): string {
 
       <div id="library-tracks-panel">
         <div class="library-toolbar">
-          <label for="library-sort" class="library-toolbar-label">Sort</label>
+          <label for="library-sort" class="library-toolbar-label" aria-label="Sort by">${icon('arrow-up-down', 15)}</label>
           <select id="library-sort" class="sort-select">
             <option value="artist">Artist</option>
             <option value="title">Title</option>

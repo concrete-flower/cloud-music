@@ -11,7 +11,7 @@ export function renderSharePage(token: string, nonce: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <title>Music Cloud -- Shared</title>
+  <title>Unsubscribed -- Shared</title>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -46,7 +46,7 @@ export function renderSharePage(token: string, nonce: string): string {
 </head>
 <body>
   <div class="sheet">
-    <div class="brand"><img src="/icon-192.png" alt=""> Music Cloud</div>
+    <div class="brand"><img src="/icon-192.png" alt=""> Unsubscribed</div>
     <div id="content">Loading&hellip;</div>
   </div>
   <script nonce="${nonce}">

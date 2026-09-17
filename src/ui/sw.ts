@@ -2,7 +2,7 @@
 // network (range requests + auth cookies don't play well with the Cache API),
 // this only makes the app shell and icons available instantly / offline.
 export const SW_SCRIPT = [
-'var CACHE_NAME = "music-cloud-shell-v1";',
+'var CACHE_NAME = "unsubscribed-shell-v2";',
 'var SHELL_URLS = ["/", "/manifest.webmanifest", "/icon.svg", "/icon-32.png", "/icon-180.png", "/icon-192.png", "/icon-512.png"];',
 
 'self.addEventListener("install", function (event) {',

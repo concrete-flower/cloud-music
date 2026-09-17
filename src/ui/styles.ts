@@ -132,54 +132,61 @@ export const STYLES = `
 
   /* ---------- App shell ---------- */
   .app-shell {
+    position: relative;
     min-height: 100dvh;
     width: min(480px, 100%);
     margin: 0 auto;
-    /* Reserve room for the bottom nav AND the floating mini-player above it
-       (mini-player sits var(--mini-height) tall, 8px above the nav) -- this
-       is reserved unconditionally so content never sits under either one,
-       whether or not something happens to be playing right now. */
-    padding: var(--safe-t) 18px calc(var(--nav-height) + var(--mini-height) + var(--safe-b) + 24px);
+    /* Top: safe-area inset plus just enough room to clear .app-brand, which
+       is an absolutely positioned overlay, not a flow element -- there is
+       no topbar anymore, so this is the only thing reserving that space.
+       Bottom: reserve room for the bottom nav AND the floating mini-player
+       above it (mini-player sits var(--mini-height) tall, 8px above the
+       nav) -- this is reserved unconditionally so content never sits under
+       either one, whether or not something happens to be playing right now. */
+    padding: calc(var(--safe-t) + 40px) 18px calc(var(--nav-height) + var(--mini-height) + var(--safe-b) + 24px);
   }
 
-  .topbar {
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: linear-gradient(var(--bg) 60%, transparent);
-    margin: 0 -18px;
-    padding: 0 18px;
-  }
-
-  .brand { display: flex; align-items: center; gap: 9px; font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
-  .brand img { width: 26px; height: 26px; border-radius: 7px; }
-
-  .user-button {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--surface-2); color: var(--muted);
-    font-size: 13px; font-weight: 700;
-    display: grid; place-items: center;
+  /* App name, shown neatly on top of the content instead of in a bar --
+     every view shares this one instance (it lives outside the .view
+     sections), so it never has to be redeclared per screen. Purely a
+     watermark: no background, not interactive. */
+  .app-brand {
+    position: absolute;
+    top: var(--safe-t);
+    left: 0;
+    right: 0;
+    padding: 14px 20px 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    pointer-events: none;
+    z-index: 4;
   }
 
   .view { padding-top: 6px; }
 
   #home-view {
     position: relative;
-    min-height: calc(100dvh - 56px - var(--safe-t) - var(--nav-height) - var(--safe-b) - 30px);
+    min-height: calc(100dvh - var(--safe-t) - 40px - var(--nav-height) - var(--mini-height) - var(--safe-b) - 24px);
     display: flex;
     align-items: center;
   }
+
+  /* Listen is sized to fit the viewport exactly (see #home-view above), so
+     scrolling it is never useful -- just belt-and-suspenders against minor
+     size drift (a reflow while art loads, browser chrome resize, etc). Set
+     on <body> in switchView() only while Listen is the active view; Library
+     and Search still scroll normally. */
+  body.scroll-locked { overflow: hidden; height: 100dvh; }
   #home-view .hero { position: relative; width: 100%; z-index: 1; }
 
   /* Soft, oversized blur of the current cover art behind the player --
      negative insets push the hard blur edge off past the visible area so
      there's no rectangular seam. Sits behind the hero content (z-index -1
      inside #home-view's own stacking context) and is allowed to bleed under
-     the translucent topbar/mini-player/bottom-nav for a unified wash of
+     the app-brand label/mini-player/bottom-nav for a unified wash of
      color instead of a flat black screen. */
   .home-backdrop {
     position: absolute;
@@ -298,7 +305,7 @@ export const STYLES = `
 
   /* ---------- Library toolbar ---------- */
   .library-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; }
-  .library-toolbar-label { font-size: 12.5px; color: var(--muted); }
+  .library-toolbar-label { display: flex; align-items: center; color: var(--muted); }
   select.sort-select {
     width: auto; height: 30px; padding: 0 10px; border-radius: 15px;
     background: var(--surface); border: 1px solid var(--line);
@@ -557,7 +564,6 @@ export const STYLES = `
       width: 480px;
       box-shadow: 0 0 0 1px var(--line);
     }
-    .topbar { background: var(--bg); }
     .mini-player, .bottom-nav { left: 50%; right: auto; transform: translateX(-50%); }
     .mini-player { width: 444px; }
     .bottom-nav { width: 480px; }

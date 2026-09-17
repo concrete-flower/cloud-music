@@ -429,6 +429,7 @@ export const CLIENT_SCRIPT = [
 '  document.querySelectorAll(".nav-button").forEach(function (btn) {',
 '    btn.classList.toggle("active", btn.dataset.view === viewId);',
 '  });',
+'  document.body.classList.toggle("scroll-locked", viewId === "home-view");',
 '  window.scrollTo(0, 0);',
 '}',
 
@@ -454,7 +455,6 @@ export const CLIENT_SCRIPT = [
 '  $("login-screen").classList.add("hidden");',
 '  $("app-screen").classList.remove("hidden");',
 '  $("bottom-nav").classList.remove("hidden");',
-'  setText("user-initial", (state.user.username || "?").slice(0, 1).toUpperCase());',
 '  setText("profile-name", state.user.username);',
 '  setText("profile-role", state.user.role === "admin" ? "Administrator" : "Member");',
 '  setText("profile-initial", (state.user.username || "?").slice(0, 1).toUpperCase());',
@@ -908,7 +908,6 @@ export const CLIENT_SCRIPT = [
 '  showLogin();',
 '}',
 '$("logout-button").addEventListener("click", logout);',
-'$("user-button").addEventListener("click", function () { switchView("profile-view"); });',
 
 '/* ---------- Player controls ---------- */',
 '$("play-button").addEventListener("click", togglePlay);',
