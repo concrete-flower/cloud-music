@@ -3,7 +3,7 @@
 // this only makes the app shell and icons available instantly / offline.
 export const SW_SCRIPT = [
 'var CACHE_NAME = "unsubscribed-shell-v2";',
-'var SHELL_URLS = ["/", "/manifest.webmanifest", "/icon.svg", "/icon-32.png", "/icon-180.png", "/icon-192.png", "/icon-512.png"];',
+'var SHELL_URLS = ["/", "/manifest.webmanifest", "/icon.svg?v=__ICON_ASSET_VERSION__", "/icon-32.png?v=__ICON_ASSET_VERSION__", "/icon-180.png?v=__ICON_ASSET_VERSION__", "/icon-192.png?v=__ICON_ASSET_VERSION__", "/icon-512.png?v=__ICON_ASSET_VERSION__"];',
 
 'self.addEventListener("install", function (event) {',
 '  event.waitUntil(',

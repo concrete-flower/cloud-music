@@ -22,7 +22,7 @@ function iconsScriptTag(): string {
   return `var ICONS = {\n    ${entries}\n  };`;
 }
 
-export function renderPage(nonce: string): string {
+export function renderPage(nonce: string, iconVersion: string, vendorVersion: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,14 +34,14 @@ export function renderPage(nonce: string): string {
   <meta name="apple-mobile-web-app-title" content="Unsubscribed">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="icon" href="/icon.svg?v=${iconVersion}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-180.png?v=${iconVersion}">
   <title>Unsubscribed</title>
   <style>${STYLES}</style>
 </head>
 <body>
   <section id="login-screen" class="hidden">
-    <div class="login-logo"><img src="/icon-192.png" alt=""></div>
+    <div class="login-logo"><img src="/icon-192.png?v=${iconVersion}" alt=""></div>
     <h1 class="login-title">Unsubscribed</h1>
     <p class="login-subtitle">Your music. No subscription.</p>
     <form id="login-form" class="login-form">
@@ -263,7 +263,7 @@ export function renderPage(nonce: string): string {
 
   <script nonce="${nonce}">
   ${iconsScriptTag()}
-  ${CLIENT_SCRIPT}
+  ${CLIENT_SCRIPT.replace('__VENDOR_ASSET_VERSION__', vendorVersion)}
   </script>
 </body>
 </html>`;

@@ -3,14 +3,14 @@
 // this is a small self-contained page that fetches the public share JSON
 // and renders native <audio> players. Kept separate from ui/page.ts so the
 // full app's client script (auth, upload, playlists...) never loads here.
-export function renderSharePage(token: string, nonce: string): string {
+export function renderSharePage(token: string, nonce: string, iconVersion: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/icon.svg?v=${iconVersion}" type="image/svg+xml">
   <title>Unsubscribed -- Shared</title>
   <style>
     :root { color-scheme: dark; }
@@ -46,7 +46,7 @@ export function renderSharePage(token: string, nonce: string): string {
 </head>
 <body>
   <div class="sheet">
-    <div class="brand"><img src="/icon-192.png" alt=""> Unsubscribed</div>
+    <div class="brand"><img src="/icon-192.png?v=${iconVersion}" alt=""> Unsubscribed</div>
     <div id="content">Loading&hellip;</div>
   </div>
   <script nonce="${nonce}">

@@ -3516,3 +3516,8 @@ export const MUSIC_METADATA_BUNDLE_B64 =
   'KiBUaGUgYnVmZmVyIG1vZHVsZSBmcm9tIG5vZGUuanMsIGZvciB0aGUgYnJvd3Nlci4KICAgKgogICAqIEBhdXRob3IgICBGZXJvc3MgQWJvdWtoYWRpamVo' +
   'IDxodHRwczovL2Zlcm9zcy5vcmc+CiAgICogQGxpY2Vuc2UgIE1JVAogICAqKQoKc2FmZS1idWZmZXIvaW5kZXguanM6CiAgKCohIHNhZmUtYnVmZmVyLiBN' +
   'SVQgTGljZW5zZS4gRmVyb3NzIEFib3VraGFkaWplaCA8aHR0cHM6Ly9mZXJvc3Mub3JnL29wZW5zb3VyY2U+ICopCiovCg==';
+
+// Content hash of the bundle above -- append as ?v=${VENDOR_ASSET_VERSION}
+// to /vendor/music-metadata.js so a rebuilt bundle isn't stuck behind a
+// year-long immutable cache at the same URL.
+export const VENDOR_ASSET_VERSION = "c60800d362";

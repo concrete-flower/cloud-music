@@ -9,8 +9,8 @@ import { shareRoutes, publicShareRoutes } from './routes/share';
 import { renderPage } from './ui/page';
 import { renderSharePage } from './ui/share-page';
 import { SW_SCRIPT } from './ui/sw';
-import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512, APP_LOGO_SVG } from './ui/icon-assets';
-import { MUSIC_METADATA_BUNDLE_B64 } from './ui/vendor-assets';
+import { ICON_PNG_32, ICON_PNG_180, ICON_PNG_192, ICON_PNG_512, APP_LOGO_SVG, ICON_ASSET_VERSION } from './ui/icon-assets';
+import { MUSIC_METADATA_BUNDLE_B64, VENDOR_ASSET_VERSION } from './ui/vendor-assets';
 
 const app = new Hono<AppEnv>();
 
@@ -49,12 +49,20 @@ app.use(
 );
 
 // --- App shell ---
-app.get('/', (c) => c.html(renderPage(c.get('secureHeadersNonce') || '')));
+app.get('/', (c) =>
+  c.html(renderPage(c.get('secureHeadersNonce') || '', ICON_ASSET_VERSION, VENDOR_ASSET_VERSION))
+);
 
 // Public share page -- deliberately outside the app shell, no auth.
-app.get('/s/:token', (c) => c.html(renderSharePage(c.req.param('token'), c.get('secureHeadersNonce') || '')));
+app.get('/s/:token', (c) =>
+  c.html(renderSharePage(c.req.param('token'), c.get('secureHeadersNonce') || '', ICON_ASSET_VERSION))
+);
 
-app.get('/sw.js', (c) => c.body(SW_SCRIPT, 200, { 'Content-Type': 'text/javascript; charset=UTF-8' }));
+app.get('/sw.js', (c) =>
+  c.body(SW_SCRIPT.replace(/__ICON_ASSET_VERSION__/g, ICON_ASSET_VERSION), 200, {
+    'Content-Type': 'text/javascript; charset=UTF-8',
+  })
+);
 
 app.get('/manifest.webmanifest', (c) => {
   return c.json({
@@ -67,10 +75,10 @@ app.get('/manifest.webmanifest', (c) => {
     background_color: '#000000',
     theme_color: '#000000',
     icons: [
-      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: `/icon.svg?v=${ICON_ASSET_VERSION}`, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: `/icon-192.png?v=${ICON_ASSET_VERSION}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: `/icon-512.png?v=${ICON_ASSET_VERSION}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: `/icon-512.png?v=${ICON_ASSET_VERSION}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   });
 });

@@ -1078,7 +1078,7 @@ export const CLIENT_SCRIPT = [
 
 'async function parseTags(file) {',
 '  try {',
-'    var mm = await import("/vendor/music-metadata.js");',
+'    var mm = await import("/vendor/music-metadata.js?v=__VENDOR_ASSET_VERSION__");',
 '    var meta = await mm.parseBlob(file);',
 '    var common = meta.common || {};',
 '    var picture = common.picture && common.picture[0];',
